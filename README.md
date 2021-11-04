@@ -53,7 +53,7 @@ How might we increase the capability of ANZ SMBs to better respond to cyber-atta
 - AWS Amplify
 
 
-  Follow the readme in the following reporsitory to deploy the app htps://github.com/scenario-cic/scenario-cic
+  Follow the readme file in the following repository to deploy the app https://github.com/scenario-cic/scenario-cic
 
 
 Note:  This is just a proof of concept. If you wish to change the types of attacks, you can do so in the template under createRecommendations.
