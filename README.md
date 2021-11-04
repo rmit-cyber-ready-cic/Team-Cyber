@@ -33,10 +33,13 @@ How might we increase the capability of ANZ SMBs to better respond to cyber-atta
 - Cloud Formation Template (API Gateway, Lambda, DynamoDB)
 
 
-    On your AWS account, create a new stack in the Cloud Formation service and upload the cloud formation template.
-    Variables: Below are the variables needed for the app to run correctly
-    'SENDER_EMAIL': "Email here" - Make sure this email and any email you sign up with is verified in SES
-    'SUMERIAN_LINK':"Sumerian url here" - The public sumerian link when you deploy the sumerian scene. Make sure its the url with the ? example: https://ba1a5551859d47b6996c30d399c1fa96.ap-southeast-2.sumerian.aws/?"
+  On your AWS account, create a new stack in the Cloud Formation service and upload the cloud formation template.
+  
+  Variables: Below are the variables needed for the app to run correctly
+  
+  'SENDER_EMAIL': "Email here" - Make sure this email and any email you sign up with is verified in SES
+   
+  'SUMERIAN_LINK':"Sumerian url here" - The public sumerian link when you deploy the sumerian scene. Make sure its the url with the ? example: https://ba1a5551859d47b6996c30d399c1fa96.ap-southeast-2.sumerian.aws/?"
 
 
 - Sumerian
