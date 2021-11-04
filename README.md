@@ -26,7 +26,7 @@ How might we increase the capability of ANZ SMBs to better respond to cyber-atta
 
 
 
-**Steps to install apk**
+**Installation Steps**
 
 
 - Watch the demo video and ppt (Refer Case Study @ https://www.rmit.edu.au/for-business/activator/partnerships/cloud-innovation-centre) to understand the functionality of the application.
