@@ -1,0 +1,976 @@
+Description: Scenar.io template for its API Gateway, Lambda and DynamoDB
+Resources:
+  recommendations72118377:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      KeySchema:
+        - AttributeName: userName
+          KeyType: HASH
+        - AttributeName: scenarioName
+          KeyType: RANGE
+      AttributeDefinitions:
+        - AttributeName: userName
+          AttributeType: S
+        - AttributeName: scenarioName
+          AttributeType: S
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain
+    Metadata:
+      aws:cdk:path: cdk/recommendations/Resource
+  getRecommendationsServiceRoleC54BEB2F:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+        Version: "2012-10-17"
+      ManagedPolicyArns:
+        - Fn::Join:
+            - ""
+            - - "arn:"
+              - Ref: AWS::Partition
+              - :iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+    Metadata:
+      aws:cdk:path: cdk/getRecommendations/ServiceRole/Resource
+  getRecommendationsServiceRoleDefaultPolicyB38804C3:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action: dynamodb:*
+            Effect: Allow
+            Resource:
+              - Fn::GetAtt:
+                  - recommendations72118377
+                  - Arn
+              - Ref: AWS::NoValue
+        Version: "2012-10-17"
+      PolicyName: getRecommendationsServiceRoleDefaultPolicyB38804C3
+      Roles:
+        - Ref: getRecommendationsServiceRoleC54BEB2F
+    Metadata:
+      aws:cdk:path: cdk/getRecommendations/ServiceRole/DefaultPolicy/Resource
+  getRecommendationsF9425DEA:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: getRecommendations
+      Code:
+        ZipFile: |
+          import json
+          import os
+          import boto3
+          from boto3.dynamodb.conditions import Key, Attr
+          def handler(event, context):
+            user = event["userName"]
+            status = False
+            if event["status"] == "False":
+              status = False
+            else:
+              status = True
+              
+            userData = {}
+
+            dynamodb = boto3.resource('dynamodb')
+            table = dynamodb.Table(os.environ['RECOMMENDATIONS_TABLE_NAME'])
+            response = table.scan(
+              FilterExpression=Attr('userName').eq(user) & Attr('status').eq(status)
+            )
+            print(response)
+            userData['details'] = response['Items']
+            
+            return {
+            'statusCode': 200,
+            'headers': {
+              "Content-Type" : "application/json",
+              "Access-Control-Allow-Headers" : "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
+              "Access-Control-Allow-Methods" : "OPTIONS,POST",
+              "Access-Control-Allow-Credentials" : True,
+              "Access-Control-Allow-Origin" : "*",
+              "X-Requested-With" : "*"
+              },
+                'body': json.dumps(userData)
+            }
+      Role:
+        Fn::GetAtt:
+          - getRecommendationsServiceRoleC54BEB2F
+          - Arn
+      Environment:
+        Variables:
+          RECOMMENDATIONS_TABLE_NAME:
+            Ref: recommendations72118377
+      Handler: index.handler
+      Runtime: python3.7
+    DependsOn:
+      - getRecommendationsServiceRoleDefaultPolicyB38804C3
+      - getRecommendationsServiceRoleC54BEB2F
+    Metadata:
+      aws:cdk:path: cdk/getRecommendations/Resource
+      aws:asset:path: asset.2335c9dc8f2d148af64516cb055d90b8e5ca4cf2eb6e18da525210f3e6ceb485
+      aws:asset:property: Code
+  createRecommendationsServiceRole17D3A295:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+        Version: "2012-10-17"
+      ManagedPolicyArns:
+        - Fn::Join:
+            - ""
+            - - "arn:"
+              - Ref: AWS::Partition
+              - :iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+    Metadata:
+      aws:cdk:path: cdk/createRecommendations/ServiceRole/Resource
+  createRecommendationsServiceRoleDefaultPolicy759B0BD0:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action: dynamodb:*
+            Effect: Allow
+            Resource:
+              - Fn::GetAtt:
+                  - recommendations72118377
+                  - Arn
+              - Ref: AWS::NoValue
+        Version: "2012-10-17"
+      PolicyName: createRecommendationsServiceRoleDefaultPolicy759B0BD0
+      Roles:
+        - Ref: createRecommendationsServiceRole17D3A295
+    Metadata:
+      aws:cdk:path: cdk/createRecommendations/ServiceRole/DefaultPolicy/Resource
+  createRecommendations6F13DDCC:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: createRecommendations
+      Code:
+        ZipFile: |
+          import json
+          import boto3
+          import os
+          
+          def handler(event, context):
+            known_attacks = event["attacks"]
+            user = event["userName"]
+            PhishingDict = {"desc": "Inside this scenario you will experience what may happen during a Phishing attack. Be sure to read the noticeboard if you're ever stuck", "link": "https://www.google.com/"}
+            TrojanDict = {"desc": "Inside this scenario you will experience what may happen during a Trojan attack. Be sure to read the noticeboard if you're ever stuck", "link": "https://www.google.com/"}
+            RansomwareDict = {"desc": "Inside this scenario you will experience what may happen during a ransomware attack. Be sure to read the noticeboard if you're ever stuck", "link": os.environ['SUMERIAN_LINK']}
+            SpywareDict = {"desc": "Inside this scenario you will experience what may happen during a Spyware attack. Be sure to read the noticeboard if you're ever stuck", "link": "https://www.google.com/"}
+            XSSDict = {"desc": "Inside this scenario you will experience what may happen during a XSS/Cross-site Scripting attack. Be sure to read the noticeboard if you're ever stuck", "link": "https://www.google.com/"}
+            RootkitDict = {"desc": "Inside this scenario you will experience what may happen during a Rootkit attack. Be sure to read the noticeboard if you're ever stuck", "link": "https://www.google.com/"}
+            attack_scenarios = {
+              'Phishing': PhishingDict,
+              'Trojan': TrojanDict,
+              'Ransomware': RansomwareDict,
+              'Spyware': SpywareDict,
+              'XSS':  XSSDict,
+              'Rootkit': RootkitDict
+            }
+            
+            lst = known_attacks.split(',')
+            dynamodb = boto3.resource('dynamodb')
+            table = dynamodb.Table(os.environ['RECOMMENDATIONS_TABLE_NAME'])
+            
+            for i in lst:
+              attack_scenarios.pop(i)
+              
+            for attack in attack_scenarios:
+              currentAttackDetails = attack_scenarios.get(attack)
+              new_rec = {
+              'userName': user,
+              'scenarioName': attack,
+              'desc': currentAttackDetails['desc'],
+              'link': currentAttackDetails['link'],
+              'status': False
+              }
+              rec = table.put_item(Item=new_rec)
+              
+            return {
+              'statusCode': 200,
+              'headers': {
+                "Content-Type" : "application/json",
+                "Access-Control-Allow-Headers" : "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
+                "Access-Control-Allow-Methods" : "OPTIONS,POST",
+                "Access-Control-Allow-Credentials" : True,
+                "Access-Control-Allow-Origin" : "*",
+                "X-Requested-With" : "*"
+              },
+              'body': json.dumps('Complete')
+            }
+      Role:
+        Fn::GetAtt:
+          - createRecommendationsServiceRole17D3A295
+          - Arn
+      Environment:
+        Variables:
+          RECOMMENDATIONS_TABLE_NAME:
+            Ref: recommendations72118377
+          SUMERIAN_LINK: ADDLINKHERE
+      Handler: index.handler
+      Runtime: python3.7
+    DependsOn:
+      - createRecommendationsServiceRoleDefaultPolicy759B0BD0
+      - createRecommendationsServiceRole17D3A295
+    Metadata:
+      aws:cdk:path: cdk/createRecommendations/Resource
+      aws:asset:path: asset.2335c9dc8f2d148af64516cb055d90b8e5ca4cf2eb6e18da525210f3e6ceb485
+      aws:asset:property: Code
+  completeScenarioServiceRole797585D6:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+        Version: "2012-10-17"
+      ManagedPolicyArns:
+        - Fn::Join:
+            - ""
+            - - "arn:"
+              - Ref: AWS::Partition
+              - :iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+    Metadata:
+      aws:cdk:path: cdk/completeScenario/ServiceRole/Resource
+  completeScenarioServiceRoleDefaultPolicyB8A456E0:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action: dynamodb:*
+            Effect: Allow
+            Resource:
+              - Fn::GetAtt:
+                  - recommendations72118377
+                  - Arn
+              - Ref: AWS::NoValue
+          - Action:
+              - ses:SendEmail
+              - SES:SendRawEmail
+            Effect: Allow
+            Resource: "*"
+        Version: "2012-10-17"
+      PolicyName: completeScenarioServiceRoleDefaultPolicyB8A456E0
+      Roles:
+        - Ref: completeScenarioServiceRole797585D6
+    Metadata:
+      aws:cdk:path: cdk/completeScenario/ServiceRole/DefaultPolicy/Resource
+  completeScenario47F5A11A:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: completeScenario
+      Code:
+        ZipFile: |
+            import json
+            import boto3
+            import os
+            from boto3.dynamodb.conditions import Key, Attr
+            def handler(event, context):
+              attack = event["attack"]
+              user = event["userName"]
+              dynamodb = boto3.resource('dynamodb')
+              table = dynamodb.Table(os.environ['RECOMMENDATIONS_TABLE_NAME'])
+              table.update_item(
+                Key={
+                  'userName': user,
+                  'scenarioName': attack
+                  },
+                UpdateExpression ="SET #stats = :newStatus",
+                ExpressionAttributeValues={
+                  ':newStatus': True
+                },
+                ExpressionAttributeNames={
+                  "#stats": "status"
+                }
+                )
+              SENDER = os.environ['SENDER_EMAIL']
+              SUBJECT = "SCENAR.IO RANSOMWARE COMPLETION"
+              # The HTML body of the email.
+              BODY_HTML = """
+                <html>
+                <body>
+                <h1>RANSOMWARE SCENAR.IO TRAINING</h1>
+                <h2>Key Takeaways and Action plan</h2>
+                <div>
+                  <h3>What is Ransomware?</h3>
+                  <p>Ransomware is a type of cyber- attack in which the attackers may prevent you from accessing your critical data/information by making them unreadable (encrypting) and denying access to them until a ransom is paid.</p>
+                  <img src="https://static.techspot.com/images2/news/bigimage/2019/03/2019-03-10-image.jpg" style="width:333px;height:222px;">
+                </div>
+                <div>
+                  <h3>How may ransomware attacks impact my organization?</h3>
+                  <ul>
+                    <li>Prevents you from accessing your computer.</li>
+                    <li>Encrypts the data so it is unusable.</li>
+                    <li>Disables applications like web-browsers.</li>
+                    <li>Cause business disruption and halt business transaction and processes.</li>
+                  </ul>  
+                </div>
+                <div>
+                  <h3>How may ransomware attacks happen?</h3>
+                  <ul>
+                    <li>In most cases, caused by computer-user visiting a malicious website.</li>
+                    <li>They may also be caused by clicking on malicious links.</li>
+                    <li>Phishing attacks where legitimate looking websites or emails may try to lure you into divulging credentials for identity theft. The genuine identity may then be used to gain access to conduct ransomware attack.</li>
+                  </ul>
+                </div>
+                <div>
+                  <h3>Should I pay the ransom?</h3>
+                  <p>There is no guarantee that the attacker can/will give the access to your computer/files after you pay them. Therefore, it is recommended not to pay the ransom. Moreover, paying ransom further encourages them to target you again as a lucrative target.</p>
+                </div>
+                </body>
+                </html>
+              """
+              CHARSET = "UTF-8"
+              client = boto3.client('ses')
+              response = client.send_email(
+                  Destination={
+                    'ToAddresses': [
+                      user,
+                    ],
+                  },
+                  Message={
+                    'Body': {
+                      'Html': {
+                        'Charset': CHARSET,
+                        'Data': BODY_HTML,
+                      },
+                    },
+                    'Subject': {
+                      'Charset': CHARSET,
+                      'Data': SUBJECT,
+                    },
+                  },
+                  Source=SENDER
+                )
+                
+                # TODO implement
+              return {
+                'statusCode': 200,
+                'headers': {
+                  'Access-Control-Allow-Origin': '*'
+                },
+                'body': json.dumps('Updated')
+              }
+      Role:
+        Fn::GetAtt:
+          - completeScenarioServiceRole797585D6
+          - Arn
+      Environment:
+        Variables:
+          RECOMMENDATIONS_TABLE_NAME:
+            Ref: recommendations72118377
+          SENDER_EMAIL: ADDEMAILHERE
+      Handler: index.handler
+      Runtime: python3.7
+    DependsOn:
+      - completeScenarioServiceRoleDefaultPolicyB8A456E0
+      - completeScenarioServiceRole797585D6
+    Metadata:
+      aws:cdk:path: cdk/completeScenario/Resource
+      aws:asset:path: asset.2335c9dc8f2d148af64516cb055d90b8e5ca4cf2eb6e18da525210f3e6ceb485
+      aws:asset:property: Code
+  scenarioA0A35C3A:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: scenario
+    Metadata:
+      aws:cdk:path: cdk/scenario/Resource
+  scenarioCloudWatchRole3732997D:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: apigateway.amazonaws.com
+        Version: "2012-10-17"
+      ManagedPolicyArns:
+        - Fn::Join:
+            - ""
+            - - "arn:"
+              - Ref: AWS::Partition
+              - :iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs
+    Metadata:
+      aws:cdk:path: cdk/scenario/CloudWatchRole/Resource
+  scenarioAccount855FCF5A:
+    Type: AWS::ApiGateway::Account
+    Properties:
+      CloudWatchRoleArn:
+        Fn::GetAtt:
+          - scenarioCloudWatchRole3732997D
+          - Arn
+    DependsOn:
+      - scenarioA0A35C3A
+    Metadata:
+      aws:cdk:path: cdk/scenario/Account
+  scenarioDeploymentE3BCBAEE64aa91fb5e868176dae96f9e3bb10d77:
+    Type: AWS::ApiGateway::Deployment
+    Properties:
+      RestApiId:
+        Ref: scenarioA0A35C3A
+      Description: Automatically created by the RestApi construct
+    DependsOn:
+      - scenariocompleteScenarioOPTIONSFBBCDDF2
+      - scenariocompleteScenarioPOST63576BE0
+      - scenariocompleteScenarioA32C216A
+      - scenariocreateRecommendationsOPTIONSEB92DC1F
+      - scenariocreateRecommendationsPOSTE8768379
+      - scenariocreateRecommendations9E242EA2
+      - scenariogetRecommendationsOPTIONS560262CE
+      - scenariogetRecommendationsPOST4CBC7B86
+      - scenariogetRecommendationsC93AF3C4
+      - scenarioOPTIONS421DC525
+    Metadata:
+      aws:cdk:path: cdk/scenario/Deployment/Resource
+  scenarioDeploymentStageprod70B7AEFA:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      RestApiId:
+        Ref: scenarioA0A35C3A
+      DeploymentId:
+        Ref: scenarioDeploymentE3BCBAEE64aa91fb5e868176dae96f9e3bb10d77
+      StageName: prod
+    Metadata:
+      aws:cdk:path: cdk/scenario/DeploymentStage.prod/Resource
+  scenarioOPTIONS421DC525:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      HttpMethod: OPTIONS
+      ResourceId:
+        Fn::GetAtt:
+          - scenarioA0A35C3A
+          - RootResourceId
+      RestApiId:
+        Ref: scenarioA0A35C3A
+      AuthorizationType: NONE
+      Integration:
+        IntegrationResponses:
+          - ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Methods: "'OPTIONS,POST'"
+              method.response.header.Access-Control-Allow-Credentials: "'true'"
+            StatusCode: "204"
+        RequestTemplates:
+          application/json: "{ statusCode: 200 }"
+        Type: MOCK
+      MethodResponses:
+        - ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: false
+            method.response.header.Access-Control-Allow-Origin: false
+            method.response.header.Access-Control-Allow-Methods: false
+            method.response.header.Access-Control-Allow-Credentials: false
+          StatusCode: "204"
+    Metadata:
+      aws:cdk:path: cdk/scenario/Default/OPTIONS/Resource
+  scenariogetRecommendationsC93AF3C4:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId:
+        Fn::GetAtt:
+          - scenarioA0A35C3A
+          - RootResourceId
+      PathPart: getRecommendations
+      RestApiId:
+        Ref: scenarioA0A35C3A
+    Metadata:
+      aws:cdk:path: cdk/scenario/Default/getRecommendations/Resource
+  scenariogetRecommendationsOPTIONS560262CE:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      HttpMethod: OPTIONS
+      ResourceId:
+        Ref: scenariogetRecommendationsC93AF3C4
+      RestApiId:
+        Ref: scenarioA0A35C3A
+      AuthorizationType: NONE
+      Integration:
+        IntegrationResponses:
+          - ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Methods: "'OPTIONS,POST'"
+              method.response.header.Access-Control-Allow-Credentials: "'true'"
+            StatusCode: "204"
+        RequestTemplates:
+          application/json: "{ statusCode: 200 }"
+        Type: MOCK
+      MethodResponses:
+        - ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: false
+            method.response.header.Access-Control-Allow-Origin: false
+            method.response.header.Access-Control-Allow-Methods: false
+            method.response.header.Access-Control-Allow-Credentials: false
+          StatusCode: "204"
+    Metadata:
+      aws:cdk:path: cdk/scenario/Default/getRecommendations/OPTIONS/Resource
+  scenariogetRecommendationsPOSTApiPermissioncdkscenarioC085A89EPOSTgetRecommendations00783FF2:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName:
+        Fn::GetAtt:
+          - getRecommendationsF9425DEA
+          - Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn:
+        Fn::Join:
+          - ""
+          - - "arn:"
+            - Ref: AWS::Partition
+            - ":execute-api:"
+            - Ref: AWS::Region
+            - ":"
+            - Ref: AWS::AccountId
+            - ":"
+            - Ref: scenarioA0A35C3A
+            - /
+            - Ref: scenarioDeploymentStageprod70B7AEFA
+            - /POST/getRecommendations
+    Metadata:
+      aws:cdk:path: cdk/scenario/Default/getRecommendations/POST/ApiPermission.cdkscenarioC085A89E.POST..getRecommendations
+  scenariogetRecommendationsPOSTApiPermissionTestcdkscenarioC085A89EPOSTgetRecommendations1C4675D9:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName:
+        Fn::GetAtt:
+          - getRecommendationsF9425DEA
+          - Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn:
+        Fn::Join:
+          - ""
+          - - "arn:"
+            - Ref: AWS::Partition
+            - ":execute-api:"
+            - Ref: AWS::Region
+            - ":"
+            - Ref: AWS::AccountId
+            - ":"
+            - Ref: scenarioA0A35C3A
+            - /test-invoke-stage/POST/getRecommendations
+    Metadata:
+      aws:cdk:path: cdk/scenario/Default/getRecommendations/POST/ApiPermission.Test.cdkscenarioC085A89E.POST..getRecommendations
+  scenariogetRecommendationsPOST4CBC7B86:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      HttpMethod: POST
+      ResourceId:
+        Ref: scenariogetRecommendationsC93AF3C4
+      RestApiId:
+        Ref: scenarioA0A35C3A
+      AuthorizationType: NONE
+      Integration:
+        IntegrationHttpMethod: POST
+        IntegrationResponses:
+          - ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Credentials: "'true'"
+              method.response.header.Access-Control-Allow-Methods: "'OPTIONS,GET,PUT,POST,DELETE'"
+            ResponseTemplates:
+              application/json: ""
+            StatusCode: "200"
+        PassthroughBehavior: WHEN_NO_MATCH
+        Type: AWS
+        Uri:
+          Fn::Join:
+            - ""
+            - - "arn:"
+              - Ref: AWS::Partition
+              - ":apigateway:"
+              - Ref: AWS::Region
+              - :lambda:path/2015-03-31/functions/
+              - Fn::GetAtt:
+                  - getRecommendationsF9425DEA
+                  - Arn
+              - /invocations
+      MethodResponses:
+        - ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: false
+            method.response.header.Access-Control-Allow-Methods: false
+            method.response.header.Access-Control-Allow-Credentials: false
+            method.response.header.Access-Control-Allow-Origin: false
+          StatusCode: "200"
+    Metadata:
+      aws:cdk:path: cdk/scenario/Default/getRecommendations/POST/Resource
+  scenariocreateRecommendations9E242EA2:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId:
+        Fn::GetAtt:
+          - scenarioA0A35C3A
+          - RootResourceId
+      PathPart: createRecommendations
+      RestApiId:
+        Ref: scenarioA0A35C3A
+    Metadata:
+      aws:cdk:path: cdk/scenario/Default/createRecommendations/Resource
+  scenariocreateRecommendationsOPTIONSEB92DC1F:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      HttpMethod: OPTIONS
+      ResourceId:
+        Ref: scenariocreateRecommendations9E242EA2
+      RestApiId:
+        Ref: scenarioA0A35C3A
+      AuthorizationType: NONE
+      Integration:
+        IntegrationResponses:
+          - ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Methods: "'OPTIONS,POST'"
+              method.response.header.Access-Control-Allow-Credentials: "'true'"
+            StatusCode: "204"
+        RequestTemplates:
+          application/json: "{ statusCode: 200 }"
+        Type: MOCK
+      MethodResponses:
+        - ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: false
+            method.response.header.Access-Control-Allow-Origin: false
+            method.response.header.Access-Control-Allow-Methods: false
+            method.response.header.Access-Control-Allow-Credentials: false
+          StatusCode: "204"
+    Metadata:
+      aws:cdk:path: cdk/scenario/Default/createRecommendations/OPTIONS/Resource
+  scenariocreateRecommendationsPOSTApiPermissioncdkscenarioC085A89EPOSTcreateRecommendations9BA93E31:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName:
+        Fn::GetAtt:
+          - createRecommendations6F13DDCC
+          - Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn:
+        Fn::Join:
+          - ""
+          - - "arn:"
+            - Ref: AWS::Partition
+            - ":execute-api:"
+            - Ref: AWS::Region
+            - ":"
+            - Ref: AWS::AccountId
+            - ":"
+            - Ref: scenarioA0A35C3A
+            - /
+            - Ref: scenarioDeploymentStageprod70B7AEFA
+            - /POST/createRecommendations
+    Metadata:
+      aws:cdk:path: cdk/scenario/Default/createRecommendations/POST/ApiPermission.cdkscenarioC085A89E.POST..createRecommendations
+  scenariocreateRecommendationsPOSTApiPermissionTestcdkscenarioC085A89EPOSTcreateRecommendationsDE694C87:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName:
+        Fn::GetAtt:
+          - createRecommendations6F13DDCC
+          - Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn:
+        Fn::Join:
+          - ""
+          - - "arn:"
+            - Ref: AWS::Partition
+            - ":execute-api:"
+            - Ref: AWS::Region
+            - ":"
+            - Ref: AWS::AccountId
+            - ":"
+            - Ref: scenarioA0A35C3A
+            - /test-invoke-stage/POST/createRecommendations
+    Metadata:
+      aws:cdk:path: cdk/scenario/Default/createRecommendations/POST/ApiPermission.Test.cdkscenarioC085A89E.POST..createRecommendations
+  scenariocreateRecommendationsPOSTE8768379:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      HttpMethod: POST
+      ResourceId:
+        Ref: scenariocreateRecommendations9E242EA2
+      RestApiId:
+        Ref: scenarioA0A35C3A
+      AuthorizationType: NONE
+      Integration:
+        IntegrationHttpMethod: POST
+        IntegrationResponses:
+          - ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Credentials: "'true'"
+              method.response.header.Access-Control-Allow-Methods: "'OPTIONS,GET,PUT,POST,DELETE'"
+            ResponseTemplates:
+              application/json: ""
+            StatusCode: "200"
+        PassthroughBehavior: WHEN_NO_MATCH
+        Type: AWS
+        Uri:
+          Fn::Join:
+            - ""
+            - - "arn:"
+              - Ref: AWS::Partition
+              - ":apigateway:"
+              - Ref: AWS::Region
+              - :lambda:path/2015-03-31/functions/
+              - Fn::GetAtt:
+                  - createRecommendations6F13DDCC
+                  - Arn
+              - /invocations
+      MethodResponses:
+        - ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: false
+            method.response.header.Access-Control-Allow-Methods: false
+            method.response.header.Access-Control-Allow-Credentials: false
+            method.response.header.Access-Control-Allow-Origin: false
+          StatusCode: "200"
+    Metadata:
+      aws:cdk:path: cdk/scenario/Default/createRecommendations/POST/Resource
+  scenariocompleteScenarioA32C216A:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId:
+        Fn::GetAtt:
+          - scenarioA0A35C3A
+          - RootResourceId
+      PathPart: completeScenario
+      RestApiId:
+        Ref: scenarioA0A35C3A
+    Metadata:
+      aws:cdk:path: cdk/scenario/Default/completeScenario/Resource
+  scenariocompleteScenarioOPTIONSFBBCDDF2:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      HttpMethod: OPTIONS
+      ResourceId:
+        Ref: scenariocompleteScenarioA32C216A
+      RestApiId:
+        Ref: scenarioA0A35C3A
+      AuthorizationType: NONE
+      Integration:
+        IntegrationResponses:
+          - ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Methods: "'OPTIONS,POST'"
+              method.response.header.Access-Control-Allow-Credentials: "'true'"
+            StatusCode: "204"
+        RequestTemplates:
+          application/json: "{ statusCode: 200 }"
+        Type: MOCK
+      MethodResponses:
+        - ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: false
+            method.response.header.Access-Control-Allow-Origin: false
+            method.response.header.Access-Control-Allow-Methods: false
+            method.response.header.Access-Control-Allow-Credentials: false
+          StatusCode: "204"
+    Metadata:
+      aws:cdk:path: cdk/scenario/Default/completeScenario/OPTIONS/Resource
+  scenariocompleteScenarioPOSTApiPermissioncdkscenarioC085A89EPOSTcompleteScenario25C01A22:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName:
+        Fn::GetAtt:
+          - completeScenario47F5A11A
+          - Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn:
+        Fn::Join:
+          - ""
+          - - "arn:"
+            - Ref: AWS::Partition
+            - ":execute-api:"
+            - Ref: AWS::Region
+            - ":"
+            - Ref: AWS::AccountId
+            - ":"
+            - Ref: scenarioA0A35C3A
+            - /
+            - Ref: scenarioDeploymentStageprod70B7AEFA
+            - /POST/completeScenario
+    Metadata:
+      aws:cdk:path: cdk/scenario/Default/completeScenario/POST/ApiPermission.cdkscenarioC085A89E.POST..completeScenario
+  scenariocompleteScenarioPOSTApiPermissionTestcdkscenarioC085A89EPOSTcompleteScenario61BBDE08:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName:
+        Fn::GetAtt:
+          - completeScenario47F5A11A
+          - Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn:
+        Fn::Join:
+          - ""
+          - - "arn:"
+            - Ref: AWS::Partition
+            - ":execute-api:"
+            - Ref: AWS::Region
+            - ":"
+            - Ref: AWS::AccountId
+            - ":"
+            - Ref: scenarioA0A35C3A
+            - /test-invoke-stage/POST/completeScenario
+    Metadata:
+      aws:cdk:path: cdk/scenario/Default/completeScenario/POST/ApiPermission.Test.cdkscenarioC085A89E.POST..completeScenario
+  scenariocompleteScenarioPOST63576BE0:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      HttpMethod: POST
+      ResourceId:
+        Ref: scenariocompleteScenarioA32C216A
+      RestApiId:
+        Ref: scenarioA0A35C3A
+      AuthorizationType: NONE
+      Integration:
+        IntegrationHttpMethod: POST
+        IntegrationResponses:
+          - ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Credentials: "'true'"
+              method.response.header.Access-Control-Allow-Methods: "'OPTIONS,GET,PUT,POST,DELETE'"
+            ResponseTemplates:
+              application/json: ""
+            StatusCode: "200"
+        PassthroughBehavior: WHEN_NO_MATCH
+        Type: AWS
+        Uri:
+          Fn::Join:
+            - ""
+            - - "arn:"
+              - Ref: AWS::Partition
+              - ":apigateway:"
+              - Ref: AWS::Region
+              - :lambda:path/2015-03-31/functions/
+              - Fn::GetAtt:
+                  - completeScenario47F5A11A
+                  - Arn
+              - /invocations
+      MethodResponses:
+        - ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: false
+            method.response.header.Access-Control-Allow-Methods: false
+            method.response.header.Access-Control-Allow-Credentials: false
+            method.response.header.Access-Control-Allow-Origin: false
+          StatusCode: "200"
+    Metadata:
+      aws:cdk:path: cdk/scenario/Default/completeScenario/POST/Resource
+  CDKMetadata:
+    Type: AWS::CDK::Metadata
+    Properties:
+      Analytics: v2:deflate64:H4sIAAAAAAAA/02QS27DIBCGz5I9Jk2z8bJOqu6qWm4vMIapS23AgkGRhXz3Ao6rrOab1z+PEz891/zp8AI3Xwk5HqOwDnn8JBAj69Db4ASyxnukFBuUGdjVGk8uCGLXb9OCA42ELjsfgeZQwv+diVO9VKSsWVmeEuViQFvZ8/gF/VRKCqxsAt1L4PEtGJEbcuqRW3RaeV+kFGgeO7v1F9vaSYml1BVamT9XkDf3vByQfH4JYkS6gEcGsxqA8AZLEkJPzazuq+/YCGGDIfaK82QXjabc9uDll5QFNtivLvLvSD9W5uSdHn+y87qurF1S2hzPvOb14dcrVbk0VGnk3Wb/ACwFG0ulAQAA
+    Metadata:
+      aws:cdk:path: cdk/CDKMetadata/Default
+    Condition: CDKMetadataAvailable
+Parameters:
+  AssetParameters2335c9dc8f2d148af64516cb055d90b8e5ca4cf2eb6e18da525210f3e6ceb485S3Bucket0D058E30:
+    Type: String
+    Description: S3 bucket for asset "2335c9dc8f2d148af64516cb055d90b8e5ca4cf2eb6e18da525210f3e6ceb485"
+  AssetParameters2335c9dc8f2d148af64516cb055d90b8e5ca4cf2eb6e18da525210f3e6ceb485S3VersionKey7840BE01:
+    Type: String
+    Description: S3 key for asset version "2335c9dc8f2d148af64516cb055d90b8e5ca4cf2eb6e18da525210f3e6ceb485"
+  AssetParameters2335c9dc8f2d148af64516cb055d90b8e5ca4cf2eb6e18da525210f3e6ceb485ArtifactHash3D9003C2:
+    Type: String
+    Description: Artifact hash for asset "2335c9dc8f2d148af64516cb055d90b8e5ca4cf2eb6e18da525210f3e6ceb485"
+Outputs:
+  scenarioEndpoint79D34CDF:
+    Value:
+      Fn::Join:
+        - ""
+        - - https://
+          - Ref: scenarioA0A35C3A
+          - .execute-api.
+          - Ref: AWS::Region
+          - "."
+          - Ref: AWS::URLSuffix
+          - /
+          - Ref: scenarioDeploymentStageprod70B7AEFA
+          - /
+Conditions:
+  CDKMetadataAvailable:
+    Fn::Or:
+      - Fn::Or:
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - af-south-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - ap-east-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - ap-northeast-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - ap-northeast-2
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - ap-south-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - ap-southeast-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - ap-southeast-2
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - ca-central-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - cn-north-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - cn-northwest-1
+      - Fn::Or:
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - eu-central-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - eu-north-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - eu-south-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - eu-west-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - eu-west-2
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - eu-west-3
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - me-south-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - sa-east-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - us-east-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - us-east-2
+      - Fn::Or:
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - us-west-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - us-west-2
