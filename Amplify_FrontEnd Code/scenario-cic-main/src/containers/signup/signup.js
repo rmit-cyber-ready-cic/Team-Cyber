@@ -202,7 +202,7 @@ export default function Signup() {
                             </Form.Group>
                             <p>Have you had any experience with the attack below ?(Tick if experienced )</p>
 
-                            {/* checkbox for the attacks to craete recommandation */}
+                            {/* checkbox for the attacks that create recommendations */}
                             <div className="checkbox">
                                 <label>
                                     <input
